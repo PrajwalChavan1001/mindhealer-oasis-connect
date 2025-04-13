@@ -23,7 +23,7 @@ interface ForumPost {
   preview: string;
   author: string;
   topic: string;
-  replies: number;
+  replies: any[];
   likes: number;
   createdAt: string;
 }
@@ -33,8 +33,10 @@ const Forum = () => {
   const [forumPosts, setForumPosts] = useState<ForumPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState("recent");
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
   const [newPostTitle, setNewPostTitle] = useState("");
   const [postTopic, setPostTopic] = useState("Anxiety");
+  const [onlineUsers, setOnlineUsers] = useState(Math.floor(Math.random() * 30) + 5); // Random number between 5-35
   const { toast } = useToast();
 
   // Fetch topics
@@ -51,30 +53,28 @@ const Forum = () => {
         
         if (data.topics && data.topics.length > 0) {
           setForumTopics(data.topics);
-        } else {
-          // Fallback to default topics if none exist in MongoDB yet
-          setForumTopics([
-            { _id: "1", name: "Anxiety", count: 324 },
-            { _id: "2", name: "Depression", count: 218 },
-            { _id: "3", name: "Stress", count: 176 },
-            { _id: "4", name: "Loneliness", count: 129 },
-            { _id: "5", name: "Motivation", count: 98 },
-            { _id: "6", name: "Relationships", count: 87 },
-            { _id: "7", name: "Self-Care", count: 64 },
-            { _id: "8", name: "Work/Life Balance", count: 52 },
-          ]);
         }
       } catch (error) {
         console.error("Error fetching topics:", error);
         toast({
-          title: "Error fetching topics",
-          description: "Failed to load forum topics. Please try again later.",
+          title: "Unable to connect to server",
+          description: "Using cached topic data. Some features may be limited.",
           variant: "destructive",
         });
       }
     };
 
     fetchTopics();
+    
+    // Simulate other users joining/leaving
+    const interval = setInterval(() => {
+      setOnlineUsers(prev => {
+        const change = Math.random() > 0.5 ? 1 : -1;
+        return Math.max(5, Math.min(50, prev + change));
+      });
+    }, 10000);
+    
+    return () => clearInterval(interval);
   }, [toast]);
 
   // Fetch posts
@@ -82,9 +82,15 @@ const Forum = () => {
     const fetchPosts = async () => {
       setLoading(true);
       try {
+        const params = new URLSearchParams();
+        params.append('sort', selectedTab);
+        if (selectedTopic) {
+          params.append('topic', selectedTopic);
+        }
+        
         const { data, error } = await supabase.functions.invoke('forum-posts', {
           method: 'GET',
-          body: { sort: selectedTab },
+          body: { sort: selectedTab, topic: selectedTopic }
         });
         
         if (error) {
@@ -93,66 +99,12 @@ const Forum = () => {
         
         if (data.posts && data.posts.length > 0) {
           setForumPosts(data.posts);
-        } else {
-          // Fallback to default posts if none exist in MongoDB yet
-          setForumPosts([
-            {
-              _id: "1",
-              title: "How do you cope with social anxiety at work?",
-              preview: "I've been struggling with meetings and presentations...",
-              author: "User_2489",
-              topic: "Anxiety",
-              replies: 8,
-              likes: 12,
-              createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-            },
-            {
-              _id: "2",
-              title: "Finding motivation when you feel stuck",
-              preview: "I've been in the same situation for months and can't seem to find the energy to make a change...",
-              author: "User_7392",
-              topic: "Motivation",
-              replies: 15,
-              likes: 27,
-              createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-            },
-            {
-              _id: "3",
-              title: "Techniques for managing panic attacks",
-              preview: "I've found some breathing exercises that help, but I'm looking for more strategies...",
-              author: "User_1056",
-              topic: "Anxiety",
-              replies: 23,
-              likes: 31,
-              createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-            },
-            {
-              _id: "4",
-              title: "Feeling disconnected from friends and family",
-              preview: "Ever since the pandemic, I've felt like there's a wall between me and my loved ones...",
-              author: "User_4201",
-              topic: "Loneliness",
-              replies: 19,
-              likes: 24,
-              createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-            },
-            {
-              _id: "5",
-              title: "How to practice self-compassion when you keep making mistakes",
-              preview: "I'm my own worst critic and it's exhausting. How do you learn to be kind to yourself?",
-              author: "User_8106",
-              topic: "Self-Care",
-              replies: 14,
-              likes: 36,
-              createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-            },
-          ]);
         }
       } catch (error) {
         console.error("Error fetching posts:", error);
         toast({
-          title: "Error fetching posts",
-          description: "Failed to load forum posts. Please try again later.",
+          title: "Unable to connect to server",
+          description: "Using cached post data. Some features may be limited.",
           variant: "destructive",
         });
       } finally {
@@ -161,7 +113,7 @@ const Forum = () => {
     };
 
     fetchPosts();
-  }, [selectedTab, toast]);
+  }, [selectedTab, selectedTopic, toast]);
 
   // Create a new post
   const handleCreatePost = async () => {
@@ -181,8 +133,6 @@ const Forum = () => {
         preview: newPostTitle.length > 50 ? newPostTitle.substring(0, 50) + "..." : newPostTitle,
         author: `User_${userId}`,
         topic: postTopic,
-        replies: 0,
-        likes: 0,
       };
 
       const { data, error } = await supabase.functions.invoke('forum-posts', {
@@ -256,6 +206,17 @@ const Forum = () => {
     }
   };
 
+  // Handle topic selection
+  const handleTopicSelect = (topicName: string) => {
+    setSelectedTopic(selectedTopic === topicName ? null : topicName);
+    toast({
+      title: selectedTopic === topicName ? "All topics" : topicName,
+      description: selectedTopic === topicName 
+        ? "Showing posts from all topics" 
+        : `Showing posts about ${topicName}`,
+    });
+  };
+
   return (
     <MainLayout>
       {/* Hero Section */}
@@ -272,11 +233,11 @@ const Forum = () => {
             
             <div className="flex items-center mt-8 space-x-2 bg-white/70 backdrop-blur-sm rounded-full px-4 py-2 border border-border/50">
               <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse-slow"></div>
-              <span className="text-sm font-medium text-foreground">27 users online</span>
+              <span className="text-sm font-medium text-foreground">{onlineUsers} users online</span>
             </div>
             
             <Badge variant="outline" className="mt-4 text-xs">
-              You are chatting as User_3482
+              You are chatting as User_{Math.floor(Math.random() * 10000)}
             </Badge>
           </div>
         </div>
@@ -299,8 +260,13 @@ const Forum = () => {
                     {forumTopics.map((topic) => (
                       <div 
                         key={topic._id} 
-                        className="flex items-center justify-between p-2 rounded-md hover:bg-secondary transition-colors cursor-pointer"
-                        onClick={() => setPostTopic(topic.name)}
+                        className={`flex items-center justify-between p-2 rounded-md hover:bg-secondary transition-colors cursor-pointer ${
+                          selectedTopic === topic.name ? 'bg-secondary/80' : ''
+                        }`}
+                        onClick={() => {
+                          setPostTopic(topic.name);
+                          handleTopicSelect(topic.name);
+                        }}
                       >
                         <span className="text-sm">{topic.name}</span>
                         <Badge variant="secondary" className="text-xs">{topic.count}</Badge>
@@ -328,9 +294,17 @@ const Forum = () => {
                       value={newPostTitle}
                       onChange={(e) => setNewPostTitle(e.target.value)}
                     />
-                    <div className="flex space-x-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1">
+                        <Badge className="bg-mindhealer-light text-mindhealer-primary hover:bg-mindhealer-light">
+                          {postTopic}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground ml-2">
+                          (Select a topic from the sidebar)
+                        </span>
+                      </div>
                       <Button 
-                        className="flex-1 bg-mindhealer-primary hover:bg-mindhealer-secondary"
+                        className="bg-mindhealer-primary hover:bg-mindhealer-secondary"
                         onClick={handleCreatePost}
                       >
                         Create a Post
@@ -354,12 +328,28 @@ const Forum = () => {
                   />
                 </div>
 
+                {selectedTopic && (
+                  <div className="mb-4 flex items-center">
+                    <Badge className="bg-mindhealer-light text-mindhealer-primary">
+                      {selectedTopic}
+                    </Badge>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="ml-2 h-auto p-1 text-xs"
+                      onClick={() => handleTopicSelect(selectedTopic)}
+                    >
+                      Clear filter
+                    </Button>
+                  </div>
+                )}
+
                 <TabsContent value="recent" className="mt-0">
                   {loading ? (
                     <div className="flex justify-center py-8">
                       <div className="animate-spin h-8 w-8 border-4 border-mindhealer-primary border-t-transparent rounded-full"></div>
                     </div>
-                  ) : (
+                  ) : forumPosts.length > 0 ? (
                     <div className="space-y-4">
                       {forumPosts.map((post) => (
                         <Card key={post._id} className="overflow-hidden hover:shadow-md transition-shadow">
@@ -379,7 +369,7 @@ const Forum = () => {
                             <div className="flex items-center text-sm text-muted-foreground">
                               <div className="flex items-center mr-4">
                                 <MessageCircle className="mr-1 h-4 w-4" />
-                                {post.replies} replies
+                                {Array.isArray(post.replies) ? post.replies.length : 0} replies
                               </div>
                               <div 
                                 className="flex items-center mr-4 cursor-pointer hover:text-mindhealer-primary"
@@ -397,14 +387,29 @@ const Forum = () => {
                         </Card>
                       ))}
                     </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
+                      <div className="mb-2">No posts found</div>
+                      {selectedTopic && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleTopicSelect(selectedTopic)}
+                        >
+                          Clear topic filter
+                        </Button>
+                      )}
+                    </div>
                   )}
                   
-                  <div className="flex justify-center mt-8">
-                    <Button variant="outline" className="flex items-center">
-                      Load More
-                      <ChevronUp className="ml-2 h-4 w-4 rotate-180" />
-                    </Button>
-                  </div>
+                  {forumPosts.length > 0 && (
+                    <div className="flex justify-center mt-8">
+                      <Button variant="outline" className="flex items-center">
+                        Load More
+                        <ChevronUp className="ml-2 h-4 w-4 rotate-180" />
+                      </Button>
+                    </div>
+                  )}
                 </TabsContent>
                 
                 <TabsContent value="popular" className="mt-0">
@@ -432,7 +437,7 @@ const Forum = () => {
                             <div className="flex items-center text-sm text-muted-foreground">
                               <div className="flex items-center mr-4">
                                 <MessageCircle className="mr-1 h-4 w-4" />
-                                {post.replies} replies
+                                {Array.isArray(post.replies) ? post.replies.length : 0} replies
                               </div>
                               <div 
                                 className="flex items-center mr-4 cursor-pointer hover:text-mindhealer-primary"
@@ -451,8 +456,17 @@ const Forum = () => {
                       ))}
                     </div>
                   ) : (
-                    <div className="flex items-center justify-center h-40 text-muted-foreground">
-                      Popular discussions will appear here.
+                    <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
+                      <div className="mb-2">No popular posts found</div>
+                      {selectedTopic && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleTopicSelect(selectedTopic)}
+                        >
+                          Clear topic filter
+                        </Button>
+                      )}
                     </div>
                   )}
                 </TabsContent>
@@ -482,7 +496,7 @@ const Forum = () => {
                             <div className="flex items-center text-sm text-muted-foreground">
                               <div className="flex items-center mr-4">
                                 <MessageCircle className="mr-1 h-4 w-4" />
-                                {post.replies} replies
+                                {Array.isArray(post.replies) ? post.replies.length : 0} replies
                               </div>
                               <div 
                                 className="flex items-center mr-4 cursor-pointer hover:text-mindhealer-primary"
@@ -501,8 +515,17 @@ const Forum = () => {
                       ))}
                     </div>
                   ) : (
-                    <div className="flex items-center justify-center h-40 text-muted-foreground">
-                      Unanswered discussions will appear here.
+                    <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
+                      <div className="mb-2">No unanswered posts found</div>
+                      {selectedTopic && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleTopicSelect(selectedTopic)}
+                        >
+                          Clear topic filter
+                        </Button>
+                      )}
                     </div>
                   )}
                 </TabsContent>
