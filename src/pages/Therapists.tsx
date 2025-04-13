@@ -114,8 +114,8 @@ const languages = [
 
 const Therapists = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [specialtyFilter, setSpecialtyFilter] = useState("");
-  const [languageFilter, setLanguageFilter] = useState("");
+  const [specialtyFilter, setSpecialtyFilter] = useState("all");
+  const [languageFilter, setLanguageFilter] = useState("all");
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -125,10 +125,10 @@ const Therapists = () => {
     const matchesSearch = therapist.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          therapist.title.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesSpecialty = specialtyFilter === "" || 
+    const matchesSpecialty = specialtyFilter === "all" || 
                            therapist.specialties.some(spec => spec.toLowerCase() === specialtyFilter.toLowerCase());
     
-    const matchesLanguage = languageFilter === "" || 
+    const matchesLanguage = languageFilter === "all" || 
                           therapist.languages.some(lang => lang.toLowerCase() === languageFilter.toLowerCase());
     
     return matchesSearch && matchesSpecialty && matchesLanguage;
@@ -170,7 +170,7 @@ const Therapists = () => {
                   <SelectValue placeholder="Specialization" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Specializations</SelectItem>
+                  <SelectItem value="all">All Specializations</SelectItem>
                   {specializations.map((specialty) => (
                     <SelectItem key={specialty} value={specialty}>
                       {specialty}
@@ -184,7 +184,7 @@ const Therapists = () => {
                   <SelectValue placeholder="Language" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Languages</SelectItem>
+                  <SelectItem value="all">All Languages</SelectItem>
                   {languages.map((language) => (
                     <SelectItem key={language} value={language}>
                       {language}
