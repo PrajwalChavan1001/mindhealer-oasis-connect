@@ -3,7 +3,9 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Home, MessageCircle, Users, Heart } from "lucide-react";
+import { Home, MessageCircle, Users, Heart, LogIn, LogOut } from "lucide-react";
+import { mockLogin, mockLogout, isLoggedIn } from "@/utils/authUtils";
+import { useToast } from "@/hooks/use-toast";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -11,6 +13,36 @@ interface MainLayoutProps {
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const location = useLocation();
+  const { toast } = useToast();
+  const [loggedIn, setLoggedIn] = React.useState(isLoggedIn());
+  
+  React.useEffect(() => {
+    const checkAuth = () => {
+      setLoggedIn(isLoggedIn());
+    };
+    
+    checkAuth();
+    window.addEventListener("storage", checkAuth);
+    return () => window.removeEventListener("storage", checkAuth);
+  }, []);
+  
+  const handleLogin = () => {
+    mockLogin("Alex");
+    setLoggedIn(true);
+    toast({
+      title: "Logged in",
+      description: "You are now logged in as Alex",
+    });
+  };
+  
+  const handleLogout = () => {
+    mockLogout();
+    setLoggedIn(false);
+    toast({
+      title: "Logged out",
+      description: "You have been logged out",
+    });
+  };
   
   const navItems = [
     { name: "Home", path: "/", icon: Home },
@@ -51,17 +83,32 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             </ul>
           </nav>
           <div>
-            <Button 
-              variant="outline" 
-              className="mr-2 hidden sm:inline-flex"
-            >
-              Sign In
-            </Button>
-            <Button
-              className="bg-mindhealer-primary hover:bg-mindhealer-secondary"
-            >
-              Join Now
-            </Button>
+            {loggedIn ? (
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-1"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline">Sign Out</span>
+              </Button>
+            ) : (
+              <>
+                <Button 
+                  variant="outline" 
+                  className="mr-2 hidden sm:inline-flex"
+                  onClick={handleLogin}
+                >
+                  <LogIn className="h-4 w-4 mr-1" />
+                  Sign In
+                </Button>
+                <Button
+                  className="bg-mindhealer-primary hover:bg-mindhealer-secondary"
+                >
+                  Join Now
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>

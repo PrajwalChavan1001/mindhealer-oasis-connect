@@ -1,45 +1,75 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import MainLayout from "@/components/layout/MainLayout";
 import { MessageCircle, BrainCircuit, Users, Calendar } from "lucide-react";
 import { Link } from "react-router-dom";
+import Dashboard from "@/components/dashboard/Dashboard";
 
 const Index = () => {
+  // Placeholder for authentication state - in a real app, this would come from your auth context
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userName, setUserName] = useState("");
+
+  // Mock auth check - in a real app, this would check your actual auth state
+  useEffect(() => {
+    // For example purposes - you would replace this with your actual auth check
+    const checkAuth = () => {
+      // Simulate logged in state - replace with your actual auth check
+      const loggedIn = localStorage.getItem("isLoggedIn") === "true";
+      setIsLoggedIn(loggedIn);
+      setUserName(localStorage.getItem("userName") || "Friend");
+    };
+    
+    checkAuth();
+    
+    // Demo purposes only - allows toggling login state for testing
+    const handleStorageChange = () => {
+      checkAuth();
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
   return (
     <MainLayout>
-      {/* Hero Section */}
-      <section className="relative overflow-hidden py-20 md:py-32 bg-gradient-to-br from-background to-mindhealer-light">
-        <div className="absolute inset-0 bg-gradient-radial from-mindhealer-light/50 to-transparent opacity-70"></div>
-        <div className="mindhealer-container relative z-10">
-          <div className="flex flex-col items-center text-center">
-            <h1 className="animate-fade-in text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl text-balance">
-              Welcome to <span className="text-gradient">MindHealer</span>
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg text-muted-foreground animate-fade-in [animation-delay:200ms]">
-              Your safe space for mental wellness. MindHealer is an anonymous mental wellness platform where you can reflect, connect, and heal—at your own pace.
-            </p>
-            <div className="mt-10 flex flex-wrap gap-4 justify-center animate-fade-in [animation-delay:400ms]">
-              <Button 
-                asChild
-                className="bg-mindhealer-primary hover:bg-mindhealer-secondary text-white px-8 py-6"
-                size="lg"
-              >
-                <Link to="/forum">Join the Conversation</Link>
-              </Button>
-              <Button 
-                asChild
-                variant="outline" 
-                className="px-8 py-6"
-                size="lg"
-              >
-                <Link to="/chat">Start Your Wellness Journey</Link>
-              </Button>
+      {isLoggedIn ? (
+        <Dashboard userName={userName} />
+      ) : (
+        // Hero Section for non-logged in users
+        <section className="relative overflow-hidden py-20 md:py-32 bg-gradient-to-br from-background to-mindhealer-light">
+          <div className="absolute inset-0 bg-gradient-radial from-mindhealer-light/50 to-transparent opacity-70"></div>
+          <div className="mindhealer-container relative z-10">
+            <div className="flex flex-col items-center text-center">
+              <h1 className="animate-fade-in text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl text-balance">
+                Welcome to <span className="text-gradient">MindHealer</span>
+              </h1>
+              <p className="mt-6 max-w-2xl text-lg text-muted-foreground animate-fade-in [animation-delay:200ms]">
+                Your safe space for mental wellness. MindHealer is an anonymous mental wellness platform where you can reflect, connect, and heal—at your own pace.
+              </p>
+              <div className="mt-10 flex flex-wrap gap-4 justify-center animate-fade-in [animation-delay:400ms]">
+                <Button 
+                  asChild
+                  className="bg-mindhealer-primary hover:bg-mindhealer-secondary text-white px-8 py-6"
+                  size="lg"
+                >
+                  <Link to="/forum">Join the Conversation</Link>
+                </Button>
+                <Button 
+                  asChild
+                  variant="outline" 
+                  className="px-8 py-6"
+                  size="lg"
+                >
+                  <Link to="/chat">Start Your Wellness Journey</Link>
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Features Section */}
       <section className="py-20 bg-background">
