@@ -1,0 +1,8 @@
+
+project_id = "totcayhpxaimdogvwbck"
+
+[functions.forum-posts]
+verify_jwt = false
+
+[functions.forum-topics]
+verify_jwt = false
