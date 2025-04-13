@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import MainLayout from "@/components/layout/MainLayout";
 import { MessageSquare, Users, MessageCircle, Clock, Heart, ChevronUp } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 // Types
@@ -228,11 +228,14 @@ const Forum = () => {
   // Handle likes
   const handleLike = async (postId: string) => {
     try {
-      await supabase.functions.invoke('forum-posts', {
+      const { error } = await supabase.functions.invoke('forum-posts', {
         method: 'PUT',
-        body: { postId },
-        query: { action: 'like' }
+        body: { postId, action: 'like' }
       });
+      
+      if (error) {
+        throw error;
+      }
       
       // Update the UI optimistically
       setForumPosts(posts => posts.map(post => 
